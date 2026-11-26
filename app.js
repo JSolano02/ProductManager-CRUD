@@ -5,6 +5,7 @@ const feedback = $('#feedback');
 const storageKey = 'productmanager.products.v1';
 const money = new Intl.NumberFormat('es-DO', { style: 'currency', currency: 'DOP' });
 let products = [];
+let editingId = null;
 try {
   const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
   if (Array.isArray(saved)) products = saved;
@@ -44,19 +45,43 @@ function refresh() {
       row.append(cell);
     }
     const actions = document.createElement('td');
-    actions.textContent = '—';
+    actions.className = 'actions';
+    const edit = document.createElement('button');
+    edit.type = 'button'; edit.className = 'edit'; edit.textContent = 'Editar';
+    edit.addEventListener('click', () => startEdit(product));
+    actions.append(edit);
     row.append(actions);
     list.append(row);
   }
   $('#empty-state').hidden = products.length > 0;
 }
+function startEdit(product) {
+  editingId = product.id;
+  for (const field of ['name', 'category', 'price', 'quantity']) $('#' + field).value = product[field];
+  $('#form-title').textContent = 'Editar producto';
+  $('#save-button').textContent = 'Guardar cambios';
+  $('#cancel-button').hidden = false;
+  notify('Editando: ' + product.name);
+  $('#name').focus();
+}
+function resetForm() {
+  editingId = null;
+  form.reset();
+  $('#form-title').textContent = 'Registrar producto';
+  $('#save-button').textContent = 'Guardar producto';
+  $('#cancel-button').hidden = true;
+}
+$('#cancel-button').addEventListener('click', () => { resetForm(); notify('Edición cancelada.'); });
 form.addEventListener('submit', (event) => {
   event.preventDefault();
   const data = readForm();
   if (!valid(data)) { notify('Completa los datos con valores válidos.', true); return; }
-  if (!persist([...products, { id: newId(), ...data }])) return;
-  form.reset();
+  const isEditing = editingId !== null;
+  const next = isEditing ? products.map(p => p.id === editingId ? { ...p, ...data } : p)
+    : [...products, { id: newId(), ...data }];
+  if (!persist(next)) return;
+  resetForm();
   refresh();
-  notify('Producto registrado correctamente.');
+  notify(isEditing ? 'Producto actualizado correctamente.' : 'Producto registrado correctamente.');
 });
 refresh();
