@@ -49,11 +49,21 @@ function refresh() {
     const edit = document.createElement('button');
     edit.type = 'button'; edit.className = 'edit'; edit.textContent = 'Editar';
     edit.addEventListener('click', () => startEdit(product));
-    actions.append(edit);
+    const remove = document.createElement('button');
+    remove.type = 'button'; remove.className = 'delete'; remove.textContent = 'Eliminar';
+    remove.addEventListener('click', () => deleteProduct(product));
+    actions.append(edit, remove);
     row.append(actions);
     list.append(row);
   }
   $('#empty-state').hidden = products.length > 0;
+}
+function deleteProduct(product) {
+  if (!window.confirm('¿Eliminar el producto «' + product.name + '»?')) return;
+  if (!persist(products.filter(p => p.id !== product.id))) return;
+  if (editingId === product.id) resetForm();
+  refresh();
+  notify('Producto eliminado correctamente.');
 }
 function startEdit(product) {
   editingId = product.id;
