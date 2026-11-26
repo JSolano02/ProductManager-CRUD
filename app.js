@@ -32,6 +32,23 @@ function newId() {
 }
 function refresh() {
   $('#product-count').textContent = products.length;
+  $('#unit-count').textContent = products.reduce((sum, p) => sum + p.quantity, 0);
+  $('#inventory-value').textContent = money.format(products.reduce((sum, p) => sum + p.price * p.quantity, 0));
+  const list = $('#product-list');
+  list.replaceChildren();
+  for (const product of products) {
+    const row = document.createElement('tr');
+    for (const value of [product.name, product.category, money.format(product.price), product.quantity]) {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      row.append(cell);
+    }
+    const actions = document.createElement('td');
+    actions.textContent = '—';
+    row.append(actions);
+    list.append(row);
+  }
+  $('#empty-state').hidden = products.length > 0;
 }
 form.addEventListener('submit', (event) => {
   event.preventDefault();
