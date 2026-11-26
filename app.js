@@ -31,13 +31,18 @@ function valid(data) {
 function newId() {
   return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
+function normalize(value) {
+  return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
 function refresh() {
   $('#product-count').textContent = products.length;
   $('#unit-count').textContent = products.reduce((sum, p) => sum + p.quantity, 0);
   $('#inventory-value').textContent = money.format(products.reduce((sum, p) => sum + p.price * p.quantity, 0));
   const list = $('#product-list');
   list.replaceChildren();
-  for (const product of products) {
+  const query = normalize($('#search').value);
+  const visible = products.filter(p => normalize(p.name).includes(query) || normalize(p.category).includes(query));
+  for (const product of visible) {
     const row = document.createElement('tr');
     for (const value of [product.name, product.category, money.format(product.price), product.quantity]) {
       const cell = document.createElement('td');
@@ -56,7 +61,8 @@ function refresh() {
     row.append(actions);
     list.append(row);
   }
-  $('#empty-state').hidden = products.length > 0;
+  $('#empty-state').hidden = visible.length > 0;
+  $('#empty-state').textContent = products.length ? 'No se encontraron productos.' : 'Todavía no hay productos registrados.';
 }
 function deleteProduct(product) {
   if (!window.confirm('¿Eliminar el producto «' + product.name + '»?')) return;
@@ -86,12 +92,19 @@ form.addEventListener('submit', (event) => {
   event.preventDefault();
   const data = readForm();
   if (!valid(data)) { notify('Completa los datos con valores válidos.', true); return; }
+  if (products.some(p => p.id !== editingId && normalize(p.name) === normalize(data.name) &&
+      normalize(p.category) === normalize(data.category))) {
+    notify('Ya existe un producto con ese nombre y categoría.', true); return;
+  }
   const isEditing = editingId !== null;
   const next = isEditing ? products.map(p => p.id === editingId ? { ...p, ...data } : p)
     : [...products, { id: newId(), ...data }];
   if (!persist(next)) return;
   resetForm();
+  $('#search').value = '';
   refresh();
   notify(isEditing ? 'Producto actualizado correctamente.' : 'Producto registrado correctamente.');
 });
+$('#search-area').hidden = false;
+$('#search').addEventListener('input', refresh);
 refresh();
